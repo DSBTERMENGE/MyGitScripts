@@ -8,6 +8,67 @@
 # Para usar em outros scripts:
 # source "$(dirname "${BASH_SOURCE[0]}")/../Comum/git_operations.sh"
 
+# --- Validar estrutura do repositório ---
+validate_repo_structure() {
+  local repo_name="$1"
+  local repo_path="$2"
+  
+  # 1. Verificar se é repositório Git
+  if [[ ! -d "$repo_path/.git" ]]; then
+    echo "❌ [$repo_name] Não é repositório Git"
+    echo "💡 Execute: cd $repo_path && git init"
+    return 1
+  fi
+  
+  # 2. Verificar se branch developer existe
+  if ! run_git "$repo_path" rev-parse --verify "$DEFAULT_BRANCH" >/dev/null 2>&1; then
+    echo "⚠️  [$repo_name] Branch $DEFAULT_BRANCH não existe"
+    echo "💡 Crie com: git checkout -b $DEFAULT_BRANCH"
+    return 2
+  fi
+  
+  # 3. Verificar se branch master existe
+  if ! run_git "$repo_path" rev-parse --verify "$PRODUCTION_BRANCH" >/dev/null 2>&1; then
+    echo "⚠️  [$repo_name] Branch $PRODUCTION_BRANCH não existe"
+    echo "💡 Crie com: git checkout -b $PRODUCTION_BRANCH"
+    return 3
+  fi
+  
+  return 0
+}
+
+# --- Validações comuns para operações (push/pull) ---
+validate_repo_for_operations() {
+  local repo_name="$1"
+  local repo_path="$2"
+  local expected_branch="$3"
+  
+  # 1. Verificar se é repositório Git
+  if [[ ! -d "$repo_path/.git" ]]; then
+    echo "❌ [$repo_name] Não é repositório Git: $repo_path"
+    return 1
+  fi
+  
+  # 2. Verificar branch atual
+  local current_branch
+  current_branch="$(run_git "$repo_path" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  if [[ "$current_branch" != "$expected_branch" ]]; then
+    echo "❌ [$repo_name] Branch atual ($current_branch) ≠ esperada ($expected_branch)"
+    return 1
+  fi
+  
+  # 3. Verificar working directory limpo
+  local status_porcelain
+  status_porcelain="$(run_git "$repo_path" status --porcelain 2>/dev/null || true)"
+  if [[ -n "$status_porcelain" ]]; then
+    echo "❌ [$repo_name] Working directory não está limpo"
+    echo "    Faça commit ou stash das alterações primeiro"
+    return 1
+  fi
+  
+  return 0
+}
+
 # --- Garantir que sempre volta para developer ---
 ensure_developer_branch() {
   local repo_path="$1"
@@ -158,21 +219,20 @@ git_safe_push() {
   local dev_branch="$3"
   local prod_branch="$4"
 
-  echo "=== PUSH [$repo_name] - DEVELOPER + PRODUCTION ==="
+  echo "=== PUSH [$repo_name] ==="
   
-  if [[ ! -d "$repo_path/.git" ]]; then
-    echo "❌ [$repo_name] Não é repositório Git: $repo_path"
+  # Validações comuns
+  if ! validate_repo_for_operations "$repo_name" "$repo_path" "$dev_branch"; then
     return 1
   fi
+  
+  # Push específico: verificar se há commits para enviar
+  echo "🔍 [$repo_name] Verificando commits pendentes..."
   
   # 1. Push da branch developer
   echo "📤 [$repo_name] Fazendo push da branch $dev_branch..."
-  if ! run_git "$repo_path" push origin "$dev_branch" 2>&1; then
-    echo "❌ [$repo_name] Push da $dev_branch falhou"
-    ensure_developer_branch "$repo_path" "$repo_name"
-    return 1
-  fi
-  echo "✅ [$repo_name] Push da $dev_branch realizado com sucesso"
+  echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
+  echo "✅ [$repo_name] Push da $dev_branch SIMULADO com sucesso"
   
   # 2. Verificar se branch production existe localmente
   if ! run_git "$repo_path" rev-parse --verify "$prod_branch" >/dev/null 2>&1; then
@@ -202,12 +262,8 @@ git_safe_push() {
     echo "ℹ️  [$repo_name] $prod_branch já está sincronizada (nenhum commit novo)"
   else
     echo "📤 [$repo_name] Fazendo push da branch $prod_branch ($ahead_prod commits)..."
-    if ! run_git "$repo_path" push origin "$prod_branch" 2>&1; then
-      echo "❌ [$repo_name] Push da $prod_branch falhou"
-      ensure_developer_branch "$repo_path" "$repo_name"
-      return 1
-    fi
-    echo "✅ [$repo_name] Push da $prod_branch realizado com sucesso"
+    echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
+    echo "✅ [$repo_name] Push da $prod_branch SIMULADO com sucesso"
   fi
   
   # 5. SEMPRE volta para developer
@@ -223,50 +279,20 @@ git_safe_pull() {
 
   echo "=== PULL [$repo_name] ==="
   
-  if [[ ! -d "$repo_path/.git" ]]; then
-    echo "❌ [$repo_name] Não é repositório Git: $repo_path"
-    return 1
-  fi
-
-  # Garantir branch correta
-  local current_branch
-  current_branch="$(run_git "$repo_path" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
-  if [[ "$current_branch" != "$branch" ]]; then
-    echo "Checkout → $branch"
-    if ! run_git "$repo_path" checkout "$branch"; then
-      echo "❌ [$repo_name] Falha no checkout $branch"
-      ensure_developer_branch "$repo_path" "$repo_name"
-      return 1
-    fi
-  fi
-
-  # Verificar working directory limpo
-  local status_porcelain
-  status_porcelain="$(run_git "$repo_path" status --porcelain 2>&1 || true)"
-  if [[ -n "$status_porcelain" ]]; then
-    echo "❌ [$repo_name] Working directory não está limpo"
-    echo "    Faça commit ou stash das alterações antes do pull"
-    ensure_developer_branch "$repo_path" "$repo_name"
+  # Validações comuns
+  if ! validate_repo_for_operations "$repo_name" "$repo_path" "$branch"; then
     return 1
   fi
 
   # Fetch
   echo "🔄 [$repo_name] Atualizando referências remotas (fetch)..."
-  if ! run_git "$repo_path" fetch --all --prune 2>&1; then
-    echo "❌ [$repo_name] Falha no fetch"
-    ensure_developer_branch "$repo_path" "$repo_name"
-    return 1
-  fi
+  echo "🧪 [SIMULAÇÃO] Fetch não executado - modo teste"
 
   # Pull
   echo "📥 [$repo_name] Fazendo pull..."
-  if ! run_git "$repo_path" pull origin "$branch" 2>&1; then
-    echo "❌ [$repo_name] Pull falhou"
-    ensure_developer_branch "$repo_path" "$repo_name"
-    return 1
-  fi
+  echo "🧪 [SIMULAÇÃO] Pull não executado - modo teste"
 
-  echo "✅ [$repo_name] Pull realizado com sucesso"
+  echo "✅ [$repo_name] Pull SIMULADO com sucesso"
   ensure_developer_branch "$repo_path" "$repo_name"
   return 0
 }

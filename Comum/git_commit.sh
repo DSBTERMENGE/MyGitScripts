@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 # =============================
 # SCRIPT GENÉRICO - GIT COMMIT
@@ -24,10 +24,60 @@ echo "   Aplicativo: $APP_NAME"
 echo "   Branch: $DEFAULT_BRANCH"
 echo "========================================="
 echo
-read -rp "Digite a mensagem do commit: " COMMIT_MSG
-if [[ -z "$COMMIT_MSG" ]]; then
-  COMMIT_MSG="Atualização automática"
+
+# Verificar se há algo para commitar em CADA repositório
+echo "🔍 Verificando estrutura e alterações nos repositórios..."
+echo
+has_changes=false
+total_repos=0
+repos_with_changes=0
+has_invalid_repos=false
+
+for entry in "${REPOS[@]}"; do
+  IFS='|' read -r name path <<<"$entry"
+  repo_path="$(to_unix_path "$path")"
+  total_repos=$((total_repos + 1))
+  
+  # Validar estrutura do repositório
+  if ! validate_repo_structure "$name" "$repo_path"; then
+    has_invalid_repos=true
+    continue
+  fi
+  
+  # Verificar status do repositório
+  if ! porcelain=$(run_git "$repo_path" status --porcelain 2>/dev/null); then
+    echo "❌ [$name] Erro ao verificar status"
+    continue
+  fi
+  
+  if [[ -n "$porcelain" ]]; then
+    file_count=$(echo "$porcelain" | wc -l)
+    echo "📝 [$name] $file_count arquivo(s) com alterações"
+    has_changes=true
+    repos_with_changes=$((repos_with_changes + 1))
+  else
+    echo "✅ [$name] Nenhuma alteração"
+  fi
+done
+
+echo
+echo "📊 Resumo: $total_repos repositório(s) verificado(s), $repos_with_changes com alterações"
+echo
+
+if [[ "$has_invalid_repos" == "true" ]]; then
+  echo "❌ Há repositórios com estrutura inválida. Corrija antes de continuar."
+  exit 1
 fi
+
+if [[ "$has_changes" == "false" ]]; then
+  echo "✅ Nada a commitar. Operação concluída."
+  exit 0
+fi
+
+# Commitar com timestamp automático
+COMMIT_MSG="Atualização automática $(date +'%Y-%m-%d %H:%M:%S')"
+echo "💾 Commitando alterações..."
+echo
 
 log "== INÍCIO COMMIT =="
 for entry in "${REPOS[@]}"; do

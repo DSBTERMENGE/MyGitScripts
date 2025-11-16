@@ -52,11 +52,12 @@ do_backup_app() {
   # Definir destino: {GoogleDrive}/{machine}/{AppName}/
   local backup_dest="${GOOGLE_DRIVE_BASE}/${BACKUP_SUBDIR}/${app_name}"
   
-  # Criar diretório de destino se não existir
-  mkdir -p "$backup_dest" || {
-    echo "❌ [BACKUP APP] Falha ao criar diretório: $backup_dest"
+  # Validar que pasta de backup existe (infraestrutura)
+  if [[ ! -d "$backup_dest" ]]; then
+    echo "❌ [BACKUP APP] Pasta de backup não existe: $backup_dest"
+    echo "💡 Crie manualmente a infraestrutura de pastas antes"
     return 1
-  }
+  fi
   
   # Criar novo backup com timestamp
   local timestamp="$(date +"%Y%m%d_%H%M%S")"
@@ -87,11 +88,12 @@ do_backup_framework() {
   # Definir destino: {GoogleDrive}/{machine}/framework_dsb/
   local backup_dest="${GOOGLE_DRIVE_BASE}/${BACKUP_SUBDIR}/framework_dsb"
   
-  # Criar diretório de destino se não existir
-  mkdir -p "$backup_dest" || {
-    echo "❌ [BACKUP FRAMEWORK] Falha ao criar diretório: $backup_dest"
+  # Validar que pasta de backup existe (infraestrutura)
+  if [[ ! -d "$backup_dest" ]]; then
+    echo "❌ [BACKUP FRAMEWORK] Pasta de backup não existe: $backup_dest"
+    echo "💡 Crie manualmente a infraestrutura de pastas antes"
     return 1
-  }
+  fi
   
   # Criar novo backup com timestamp
   local timestamp="$(date +"%Y%m%d_%H%M%S")"
