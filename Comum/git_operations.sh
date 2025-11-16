@@ -231,8 +231,12 @@ git_safe_push() {
   
   # 1. Push da branch developer
   echo "📤 [$repo_name] Fazendo push da branch $dev_branch..."
-  echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
-  echo "✅ [$repo_name] Push da $dev_branch SIMULADO com sucesso"
+  if ! run_git "$repo_path" push origin "$dev_branch"; then
+    echo "❌ [$repo_name] Falha no push da $dev_branch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
+  echo "✅ [$repo_name] Push da $dev_branch realizado com sucesso"
   
   # 2. Verificar se branch production existe localmente
   if ! run_git "$repo_path" rev-parse --verify "$prod_branch" >/dev/null 2>&1; then
@@ -262,8 +266,12 @@ git_safe_push() {
     echo "ℹ️  [$repo_name] $prod_branch já está sincronizada (nenhum commit novo)"
   else
     echo "📤 [$repo_name] Fazendo push da branch $prod_branch ($ahead_prod commits)..."
-    echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
-    echo "✅ [$repo_name] Push da $prod_branch SIMULADO com sucesso"
+    if ! run_git "$repo_path" push origin "$prod_branch"; then
+      echo "❌ [$repo_name] Falha no push da $prod_branch"
+      ensure_developer_branch "$repo_path" "$repo_name"
+      return 1
+    fi
+    echo "✅ [$repo_name] Push da $prod_branch realizado com sucesso"
   fi
   
   # 5. SEMPRE volta para developer
@@ -286,13 +294,21 @@ git_safe_pull() {
 
   # Fetch
   echo "🔄 [$repo_name] Atualizando referências remotas (fetch)..."
-  echo "🧪 [SIMULAÇÃO] Fetch não executado - modo teste"
+  if ! run_git "$repo_path" fetch origin; then
+    echo "❌ [$repo_name] Falha no fetch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
 
   # Pull
   echo "📥 [$repo_name] Fazendo pull..."
-  echo "🧪 [SIMULAÇÃO] Pull não executado - modo teste"
+  if ! run_git "$repo_path" pull origin "$branch"; then
+    echo "❌ [$repo_name] Falha no pull"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
 
-  echo "✅ [$repo_name] Pull SIMULADO com sucesso"
+  echo "✅ [$repo_name] Pull realizado com sucesso"
   ensure_developer_branch "$repo_path" "$repo_name"
   return 0
 }
