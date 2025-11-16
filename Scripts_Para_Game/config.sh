@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+# =============================
+# CONFIGURAÇÃO ESPECÍFICA - Game
+# =============================
+# Este arquivo contém configurações específicas do Game
+# Para usar em outros scripts, adicione no início:
+# source "$(dirname "${BASH_SOURCE[0]}")/config.sh"
+
+# --- Carregar Configurações Base Compartilhadas ---
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$SCRIPT_DIR/../Comum/config_base.sh"
+
+# --- Nome do Aplicativo ---
+APP_NAME="Game"
+
+# --- Repositórios ---
+REPOS=(
+  "Game|C:/Applications_DSB/Game"
+  "backend|C:/Applications_DSB/framework_dsb/backend"
+  "frontend|C:/Applications_DSB/framework_dsb/frontend"
+)
+
+# --- Configuração do Banco de Dados ---
+DB_PATH="C:/Applications_DSB/Game/data"
+DB_FILES="game.db"
