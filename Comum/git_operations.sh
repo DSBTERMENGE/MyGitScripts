@@ -231,8 +231,12 @@ git_safe_push() {
   
   # 1. Push da branch developer
   echo "📤 [$repo_name] Fazendo push da branch $dev_branch..."
-  echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
-  echo "✅ [$repo_name] Push da $dev_branch SIMULADO com sucesso"
+  if ! run_git "$repo_path" push origin "$dev_branch"; then
+    echo "❌ [$repo_name] Falha no push da branch $dev_branch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
+  echo "✅ [$repo_name] Push da $dev_branch concluído"
   
   # 2. Verificar se branch production existe localmente
   if ! run_git "$repo_path" rev-parse --verify "$prod_branch" >/dev/null 2>&1; then
@@ -262,8 +266,12 @@ git_safe_push() {
     echo "ℹ️  [$repo_name] $prod_branch já está sincronizada (nenhum commit novo)"
   else
     echo "📤 [$repo_name] Fazendo push da branch $prod_branch ($ahead_prod commits)..."
-    echo "🧪 [SIMULAÇÃO] Push não executado - modo teste"
-    echo "✅ [$repo_name] Push da $prod_branch SIMULADO com sucesso"
+    if ! run_git "$repo_path" push origin "$prod_branch"; then
+      echo "❌ [$repo_name] Falha no push da branch $prod_branch"
+      ensure_developer_branch "$repo_path" "$repo_name"
+      return 1
+    fi
+    echo "✅ [$repo_name] Push da $prod_branch concluído"
   fi
   
   # 5. SEMPRE volta para developer
@@ -271,28 +279,61 @@ git_safe_push() {
   return 0
 }
 
-# --- Pull seguro ---
+# --- Pull seguro (developer + master) ---
 git_safe_pull() {
   local repo_name="$1"
   local repo_path="$2"
-  local branch="$3"
+  local dev_branch="$3"
+  local prod_branch="$4"
 
   echo "=== PULL [$repo_name] ==="
   
   # Validações comuns
-  if ! validate_repo_for_operations "$repo_name" "$repo_path" "$branch"; then
+  if ! validate_repo_for_operations "$repo_name" "$repo_path" "$dev_branch"; then
     return 1
   fi
 
-  # Fetch
+  # Fetch para atualizar referências remotas
   echo "🔄 [$repo_name] Atualizando referências remotas (fetch)..."
-  echo "🧪 [SIMULAÇÃO] Fetch não executado - modo teste"
+  if ! run_git "$repo_path" fetch origin; then
+    echo "❌ [$repo_name] Falha no fetch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
 
-  # Pull
-  echo "📥 [$repo_name] Fazendo pull..."
-  echo "🧪 [SIMULAÇÃO] Pull não executado - modo teste"
+  # 1. Pull da branch developer
+  echo "📥 [$repo_name] Fazendo pull da branch $dev_branch..."
+  if ! run_git "$repo_path" pull origin "$dev_branch"; then
+    echo "❌ [$repo_name] Falha no pull da branch $dev_branch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
+  echo "✅ [$repo_name] Pull da $dev_branch concluído"
 
-  echo "✅ [$repo_name] Pull SIMULADO com sucesso"
+  # 2. Verificar se branch production existe localmente
+  if ! run_git "$repo_path" rev-parse --verify "$prod_branch" >/dev/null 2>&1; then
+    echo "⚠️  [$repo_name] Branch $prod_branch não existe localmente - pulando pull"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 0
+  fi
+
+  # 3. Switch para production
+  echo "🔄 [$repo_name] Mudando para branch $prod_branch..."
+  if ! run_git "$repo_path" checkout "$prod_branch" 2>&1; then
+    echo "❌ [$repo_name] Falha ao mudar para $prod_branch"
+    ensure_developer_branch "$repo_path" "$repo_name"
+    return 1
+  fi
+
+  # 4. Pull da branch production
+  echo "📥 [$repo_name] Fazendo pull da branch $prod_branch..."
+  if ! run_git "$repo_path" pull origin "$prod_branch"; then
+    echo "⚠️  [$repo_name] Falha no pull da branch $prod_branch (pode não existir no remoto)"
+  else
+    echo "✅ [$repo_name] Pull da $prod_branch concluído"
+  fi
+
+  # 5. SEMPRE volta para developer
   ensure_developer_branch "$repo_path" "$repo_name"
   return 0
 }

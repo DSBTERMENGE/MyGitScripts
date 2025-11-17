@@ -41,11 +41,46 @@ fi
 echo "✅ Estrutura validada"
 echo
 
+# BACKUP DE SEGURANÇA ANTES DO PULL
+echo "== BACKUP DE SEGURANÇA =="
+echo "📦 Criando backup antes de atualizar do GitHub..."
+echo
+
+log "== INÍCIO BACKUP PRÉ-PULL =="
+# Backup do aplicativo específico
+if ! do_backup_app "$APP_NAME" "C:/Applications_DSB/${APP_NAME}"; then
+  echo "❌ Falha no backup do aplicativo"
+  echo "⚠️  Recomendado fazer backup manual antes de continuar"
+  read -rp "Continuar mesmo assim? (s/N): " resposta
+  if [[ ! "$resposta" =~ ^[sS]$ ]]; then
+    echo "Operação cancelada pelo usuário"
+    exit 1
+  fi
+else
+  echo "✅ Backup do aplicativo concluído"
+fi
+
+# Backup do framework_dsb (compartilhado)
+if ! do_backup_framework; then
+  echo "⚠️  Falha no backup do framework"
+else
+  echo "✅ Backup do framework concluído"
+fi
+
+# Limpeza dos backups antigos
+DeletaBkpMaisAntigo "${GOOGLE_DRIVE_BASE}/${BACKUP_SUBDIR}/${APP_NAME}" "${APP_NAME}"
+DeletaBkpMaisAntigo "${GOOGLE_DRIVE_BASE}/${BACKUP_SUBDIR}/framework_dsb" "framework_dsb"
+log "== FIM BACKUP PRÉ-PULL =="
+
+echo
+echo "✅ Backup de segurança concluído"
+echo
+
 # Executar pull nos repositórios
-echo "== EXECUTANDO PULL =="
+echo "== EXECUTANDO PULL (DEVELOPER + MASTER) =="
 for entry in "${REPOS[@]}"; do
   IFS='|' read -r name path <<<"$entry"
-  git_safe_pull "$name" "$(to_unix_path "$path")" "$DEFAULT_BRANCH"
+  git_safe_pull "$name" "$(to_unix_path "$path")" "$DEFAULT_BRANCH" "$PRODUCTION_BRANCH"
   echo
 done
 
