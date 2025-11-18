@@ -74,9 +74,18 @@ if [[ "$has_changes" == "false" ]]; then
   exit 0
 fi
 
-# Commitar com timestamp automático
-COMMIT_MSG="Atualização automática $(date +'%Y-%m-%d %H:%M:%S')"
-echo "💾 Commitando alterações..."
+# Solicitar mensagem de commit ao usuário
+echo "💬 Digite a mensagem do commit:"
+read -r COMMIT_MSG
+
+# Se não digitar nada, usar mensagem padrão com timestamp
+if [[ -z "$COMMIT_MSG" ]]; then
+  COMMIT_MSG="Atualização automática $(date +'%Y-%m-%d %H:%M:%S')"
+  echo "ℹ️  Usando mensagem padrão: $COMMIT_MSG"
+fi
+
+echo
+echo "💾 Commitando alterações com: \"$COMMIT_MSG\""
 echo
 
 log "== INÍCIO COMMIT =="
