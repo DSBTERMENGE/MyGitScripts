@@ -40,9 +40,9 @@ log ""
 
 # Repositórios a atualizar
 REPOS=(
-    "/home/davidbit/framework_dsb/backend"
-    "/home/davidbit/framework_dsb/frontend"
-    "/home/davidbit/FinCtl"
+    "/home/DavidBit/Applications_DSB/framework_dsb/backend"
+    "/home/DavidBit/Applications_DSB/framework_dsb/frontend"
+    "/home/DavidBit/Applications_DSB/FinCtl"
 )
 
 WEBAPP="davidbit.pythonanywhere.com"
