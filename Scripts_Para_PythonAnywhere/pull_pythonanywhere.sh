@@ -80,7 +80,7 @@ for REPO in "${REPOS[@]}"; do
         log "❌ ERRO: Mudanças não commitadas em $REPO"
         log_only "$STATUS_OUTPUT"
         REPO_ERRORS=$((REPO_ERRORS + 1))
-        exit 1
+        continue
     fi
     log_only "✓ Working tree limpo"
     
@@ -94,30 +94,46 @@ for REPO in "${REPOS[@]}"; do
         continue
     fi
     
-    # Pull developer
-    log "⬇️  Pull developer..."
-    if git checkout developer >> "$LOG_FILE" 2>&1 && git pull origin developer >> "$LOG_FILE" 2>&1; then
-        COMMITS_DEV=$(git log --oneline -3 2>> "$LOG_FILE")
-        log_only "✓ Developer atualizado"
-        log_only "Últimos commits:"
-        log_only "$COMMITS_DEV"
+    # Verificar se há atualizações para developer
+    git checkout developer >> "$LOG_FILE" 2>&1
+    BEHIND_DEV=$(git rev-list --count HEAD..origin/developer 2>> "$LOG_FILE" || echo "0")
+    
+    if [[ "$BEHIND_DEV" -gt 0 ]]; then
+        log "⬇️  Pull developer ($BEHIND_DEV commit(s) novos)..."
+        if git pull origin developer >> "$LOG_FILE" 2>&1; then
+            COMMITS_DEV=$(git log --oneline -3 2>> "$LOG_FILE")
+            log_only "✓ Developer atualizado"
+            log_only "Últimos commits:"
+            log_only "$COMMITS_DEV"
+        else
+            log "❌ ERRO ao atualizar developer"
+            REPO_ERRORS=$((REPO_ERRORS + 1))
+            continue
+        fi
     else
-        log "❌ ERRO ao atualizar developer"
-        REPO_ERRORS=$((REPO_ERRORS + 1))
-        continue
+        log "✅ Developer já está atualizado"
+        log_only "✓ Nenhum commit novo em origin/developer"
     fi
     
-    # Pull master
-    log "⬇️  Pull master..."
-    if git checkout master >> "$LOG_FILE" 2>&1 && git pull origin master >> "$LOG_FILE" 2>&1; then
-        COMMITS_MASTER=$(git log --oneline -3 2>> "$LOG_FILE")
-        log_only "✓ Master atualizado"
-        log_only "Últimos commits:"
-        log_only "$COMMITS_MASTER"
+    # Verificar se há atualizações para master
+    git checkout master >> "$LOG_FILE" 2>&1
+    BEHIND_MASTER=$(git rev-list --count HEAD..origin/master 2>> "$LOG_FILE" || echo "0")
+    
+    if [[ "$BEHIND_MASTER" -gt 0 ]]; then
+        log "⬇️  Pull master ($BEHIND_MASTER commit(s) novos)..."
+        if git pull origin master >> "$LOG_FILE" 2>&1; then
+            COMMITS_MASTER=$(git log --oneline -3 2>> "$LOG_FILE")
+            log_only "✓ Master atualizado"
+            log_only "Últimos commits:"
+            log_only "$COMMITS_MASTER"
+        else
+            log "❌ ERRO ao atualizar master"
+            REPO_ERRORS=$((REPO_ERRORS + 1))
+            continue
+        fi
     else
-        log "❌ ERRO ao atualizar master"
-        REPO_ERRORS=$((REPO_ERRORS + 1))
-        continue
+        log "✅ Master já está atualizado"
+        log_only "✓ Nenhum commit novo em origin/master"
     fi
     
     log "✅ $REPO atualizado (master ativo)"
