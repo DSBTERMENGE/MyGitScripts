@@ -10,7 +10,7 @@
 set -e
 
 # Configuração de log
-LOG_FILE="$HOME/scripts/atualizar_producao.log"
+LOG_FILE="$HOME/scripts_dsb/log_pull_finctl.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Função de log (escreve no arquivo e na tela)
