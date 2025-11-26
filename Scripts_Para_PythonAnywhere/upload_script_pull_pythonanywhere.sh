@@ -3,10 +3,10 @@
 # =========================================================================
 # UPLOAD SCRIPT - Local → PythonAnywhere
 # =========================================================================
-# Envia atualizar_producao.sh via SCP para PythonAnywhere
+# Envia download_dbdump_producao.sh via SCP para PythonAnywhere
 # =========================================================================
 
-set -e
+set -ex
 
 # Carregar configuração
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,13 +19,13 @@ echo ""
 
 # Criar diretório scripts se não existir
 echo "📁 Criando diretório no PythonAnywhere..."
-ssh "$PA_USERNAME@$PA_HOSTNAME" "mkdir -p $PA_SCRIPTS_DIR"
+ssh "$PA_USERNAME@$PA_HOSTNAME" "mkdir -p $PA_SCRIPTS_DIR" || true
 echo ""
 
 # Upload do script
-echo "📤 Enviando atualizar_producao.sh..."
-scp "$SCRIPT_DIR/atualizar_producao.sh" \
-    "$PA_USERNAME@$PA_HOSTNAME:$PA_SCRIPTS_DIR/atualizar_producao.sh"
+echo "📤 Enviando download_dbdump_producao.sh..."
+scp "$SCRIPT_DIR/download_dbdump_producao.sh" \
+    "$PA_USERNAME@$PA_HOSTNAME:$PA_SCRIPTS_DIR/download_dbdump_producao.sh"
 
 echo ""
 echo "✅ Upload concluído!"
@@ -36,7 +36,7 @@ echo "========================================="
 echo ""
 echo "1. Abrir Bash Console no PythonAnywhere"
 echo "2. Executar:"
-echo "   bash ~/scripts/atualizar_producao.sh"
+echo "   bash ~/scripts/download_dbdump_producao.sh"
 echo ""
 echo "Isso atualizará os 3 repositórios:"
 echo "  • framework_dsb/backend"
